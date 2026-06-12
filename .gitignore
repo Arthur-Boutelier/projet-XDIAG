@@ -1,0 +1,88 @@
+# Environnements virtuels
+venv/
+.venv/
+env/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Logs
+*.log
+
+# Tests / Coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Variables d'environnement
+.env
+.env.*
+
+# Fichiers système macOS
+.DS_Store
+
+# Fichiers système Windows
+Thumbs.db
+desktop.ini
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+
+# Type checkers
+.mypy_cache/
+.pyre/
+.pytype/
+
+# Ruff
+.ruff_cache/
+
+# Cython debug symbols
+cython_debug/
+
+# Sphinx
+docs/_build/
+
+# SQLite
+*.sqlite3
+*.db
+
+# Fichiers temporaires
+*.tmp
+*.swp
+*.swo
+
+# Secrets et clés
+*.pem
+*.key
+secrets.json
+
+# Données volumineuses (à adapter selon le projet)
+data/
+datasets/
+
+# Modèles entraînés (si IA/ML)
+models/
+checkpoints/
+*.pth
+*.pt
+*.h5
+*.ckpt
