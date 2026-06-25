@@ -78,6 +78,7 @@ secrets.json
 # Données volumineuses (à adapter selon le projet)
 data/
 datasets/
+cleaned/
 
 # Modèles entraînés (si IA/ML)
 models/
