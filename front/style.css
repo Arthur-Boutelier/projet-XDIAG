@@ -1,3 +1,7 @@
+body {
+    min-width: 300px;
+}
+
 .border-custom {
     border: 5px solid #0080FF;
     border-radius: 25px;
@@ -6,4 +10,10 @@
 .container {
     margin-top: 24px;
     margin-bottom: 24px;
+}
+
+@media (max-width: 550px) {
+    .result {
+        flex-direction: column;
+    }
 }
