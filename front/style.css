@@ -2,12 +2,20 @@ body {
     min-width: 300px;
 }
 
-.border-custom {
-    border: 5px solid #0080FF;
-    border-radius: 25px;
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: nowrap;
 }
 
-.container {
+.border-custom {
+    border: 5px solid #0080FF;
+    border-radius: 18px;
+    box-shadow: 1px 1px 7px #000;
+}
+
+.section {
     margin-top: 24px;
     margin-bottom: 24px;
 }
@@ -15,5 +23,15 @@ body {
 @media (max-width: 550px) {
     .result {
         flex-direction: column;
+    }
+
+    .image-radio {
+        width: 100%;
+        height: auto;
+    }
+
+    .result {
+        display: flex;
+        gap: 20px;
     }
 }
