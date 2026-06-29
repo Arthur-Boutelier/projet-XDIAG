@@ -1,17 +1,9 @@
-body {
-    padding-left: 100px;
-    padding-right: 100px;
-}
-
-div {
-    border-style: solid;
-    border-color: #0080FF;
+.border-custom {
+    border: 5px solid #0080FF;
     border-radius: 25px;
-    padding: 10px;
 }
 
-.image {
-    padding: 0;
-    height: fit-content;
-    width: fit-content;
+.container {
+    margin-top: 24px;
+    margin-bottom: 24px;
 }

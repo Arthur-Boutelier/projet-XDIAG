@@ -4,42 +4,55 @@
     <meta charset="UTF-8">
     <title>ARVI-RX — Accueil</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+          rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+          crossorigin="anonymous">
 </head>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+        crossorigin="anonymous"></script>
+
 <body>
-<header>
-    <img src="./icons/menu_burger.svg" alt="Icône du menu burger">
-    <h1>Assistant Radiologue Virtuel</h1>
-    <img src="./icons/user_icon.svg" alt="Icône de l'utilisateur">
-</header>
+<div class="container">
+    <header class="mb-4 d-flex justify-content-between align-items-center">
+        <img src="./icons/menu_burger.svg" alt="Icône du menu burger">
+        <h1>Assistant Radiologue Virtuel</h1>
+        <img src="./icons/user_icon.svg" alt="Icône de l'utilisateur">
+    </header>
 
-<nav>
+    <nav>
 
-</nav>
+    </nav>
 
-<div class="container image">
-    <img src="./images/radio.jpg" alt="Image d'une radio thoracique">
-</div>
-<div class="container conclusion">
-    <h2>Conclusion</h2>
+    <div class="result d-flex gap-4">
+        <img src="./images/radio.jpg" alt="Image d'une radio thoracique" class="image-radio border-custom">
 
-    <p>Actélectasie basale gauche probable</p>
-    <h3>Confiance</h3>
-    <p class="score">82 %</p>
-</div>
-<div class="container key_points">
-    <h2>Points clés</h2>
-    <ul>
-        <li>perte de volume  basale gauche</li>
-        <li>Rétraction des structures</li>
-        <li>Opacité linéaire basale</li>
-    </ul>
-</div>
-<div class="container Recommandations">
-    <h2>Recommandations</h2>
-    <ul>
-        <li>Corrélation clinique</li>
-        <li>Contrôle radiologique</li>
-    </ul>
+        <div class="conclusion container border-custom my-0 p-3">
+            <h2>Conclusion</h2>
+
+            <p>Actélectasie basale gauche probable</p>
+            <h3>Confiance</h3>
+            <p class="score">82 %</p>
+        </div>
+    </div>
+
+    <div class="key_points container border-custom p-3">
+        <h2>Points clés</h2>
+        <ul>
+            <li>perte de volume  basale gauche</li>
+            <li>Rétraction des structures</li>
+            <li>Opacité linéaire basale</li>
+        </ul>
+    </div>
+
+    <div class="recommandations container border-custom p-3">
+        <h2>Recommandations</h2>
+        <ul>
+            <li>Corrélation clinique</li>
+            <li>Contrôle radiologique</li>
+        </ul>
+    </div>
 </div>
 </body>
 </html>
