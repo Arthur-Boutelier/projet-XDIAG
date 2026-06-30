@@ -1,0 +1,19 @@
+body {
+    min-width: 354px;
+}
+
+@media (max-width: 770px) {
+    .result {
+        flex-direction: column;
+    }
+
+    .image-radio {
+        width: 100%;
+        height: auto;
+    }
+
+    .result {
+        display: flex;
+        gap: 20px;
+    }
+}

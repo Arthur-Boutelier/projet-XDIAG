@@ -1,3 +1,16 @@
+function updateHeaderTitle(){
+    const title = document.getElementById("title");
+
+    if (window.innerWidth <  490){
+        title.textContent = "ARVI-RX";
+    } else {
+        title.textContent = "Assistant Radiologue Virtuel";
+    }
+}
+
+updateHeaderTitle();
+window.addEventListener("resize", updateHeaderTitle);
+
 const dropZone = document.getElementById("drop-zone");
 const fileInput = document.getElementById("file-input");
 const preview = document.getElementById("preview");

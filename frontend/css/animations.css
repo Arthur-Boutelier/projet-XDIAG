@@ -1,0 +1,9 @@
+/* Animation de la zone Drag&Drop */
+.drop-zone:hover {
+    background: #eef6ff;
+}
+
+.drop-zone.dragover {
+    background: #dceeff;
+    border-color: #005fcc;
+}
