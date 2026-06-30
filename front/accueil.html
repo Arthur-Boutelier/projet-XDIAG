@@ -25,8 +25,14 @@
 
     </nav>
 
+    <div id="drop-zone" class="drop-zone my-4">
+        <p>Glissez une radiographie ou cliquez pour sélectionner</p>
+        <p class="comment">format : .jpg, .jpeg, .png, .webp</p>
+        <input type="file" id="file-input" accept=".jpg, .jpeg, .png, .webp" hidden>
+    </div>
+
     <div class="result d-flex gap-4">
-        <img src="./images/radio.jpg" alt="Image d'une radio thoracique" class="image-radio border-custom">
+        <img src="./images/radio.jpg" alt="Image d'une radio thoracique" class="image-radio border-custom" id="preview">
 
         <div class="conclusion container border-custom my-0 p-3 section">
             <h2>Conclusion</h2>
@@ -54,5 +60,6 @@
         </ul>
     </div>
 </div>
+<script src="./script.js"></script>
 </body>
 </html>
