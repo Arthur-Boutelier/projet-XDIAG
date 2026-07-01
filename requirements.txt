@@ -1,2 +1,6 @@
 kagglehub
 pandas
+fastapi
+routes
+uvicorn
+python-multipart

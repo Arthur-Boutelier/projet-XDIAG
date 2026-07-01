@@ -1,3 +1,5 @@
+import { cropImage, sendImage } from "./api.js";
+
 function updateHeaderTitle(){
     const title = document.getElementById("title");
 
@@ -19,9 +21,19 @@ dropZone.addEventListener("click", () => {
     fileInput.click();
 });
 
-fileInput.addEventListener("change", (e) => {
+fileInput.addEventListener("change", async (e) => {
     const file = e.target.files[0];
-    showImage(file);
+
+    if (!file) return;
+
+    const blob = await cropImage(file);
+    const url = URL.createObjectURL(blob);
+
+    preview.src = url;
+    preview.style.display = "block";
+
+    const data = await sendImage(file);
+    console.log(data);
 });
 
 dropZone.addEventListener("dragover", (e) => {
@@ -37,7 +49,7 @@ dropZone.addEventListener("drop", (e) => {
     e.preventDefault();
     dropZone.classList.remove("dragover");
 
-    const file = e.target.files[0];
+    const file = e.dataTransfer.files[0];
     showImage(file);
 });
 
