@@ -11,7 +11,7 @@
 
 .drop-zone {
     border: 2px dashed #0080FF;
-    border-radius: 20px;
+    border-radius: 18px;
     padding: 40px;
     text-align: center;
     cursor: pointer;
@@ -21,4 +21,14 @@
 
 .comment {
     color: #777777;
+}
+
+#age, #sex {
+    border: 2px solid #0080FF;
+    border-radius: 10px;
+}
+
+#reset {
+    background: #bababa;
+    border: 1px solid #bababa;
 }

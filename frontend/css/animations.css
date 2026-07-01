@@ -7,3 +7,7 @@
     background: #dceeff;
     border-color: #005fcc;
 }
+
+#reset:hover {
+    background: #aaaaaa;
+}

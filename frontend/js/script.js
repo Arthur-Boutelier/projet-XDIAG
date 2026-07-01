@@ -1,28 +1,7 @@
 import { cropImage, sendImage } from "./api.js";
 
-const frontale = document.getElementById("frontale");
-const laterale = document.getElementById("laterale");
 
-const ap = document.getElementById("ap");
-const pa = document.getElementById("pa");
-const directionRadios = [ap, pa];
-
-function updateDirectionState() {
-    if (laterale.checked) {
-        directionRadios.forEach(r => {
-            r.checked = false;
-            r.disabled = true;
-        });
-    } else {
-        directionRadios.forEach(r => {
-            r.disabled = false;
-        });
-    }
-}
-
-frontale.addEventListener("change", updateDirectionState);
-laterale.addEventListener("change", updateDirectionState);
-
+// Gérer le titre de la page en fonction de la taille
 function updateHeaderTitle(){
     const title = document.getElementById("title");
 
@@ -36,6 +15,8 @@ function updateHeaderTitle(){
 updateHeaderTitle();
 window.addEventListener("resize", updateHeaderTitle);
 
+
+// Drag&Drop
 const dropZone = document.getElementById("drop-zone");
 const fileInput = document.getElementById("file-input");
 const preview = document.getElementById("preview");
@@ -88,3 +69,42 @@ function showImage(file) {
 
     reader.readAsDataURL(file);
 }
+
+
+// Ignorer le champs AP/PA en cas de radio latérale
+const frontale = document.getElementById("frontale");
+const laterale = document.getElementById("laterale");
+
+const ap = document.getElementById("ap");
+const pa = document.getElementById("pa");
+const directionRadios = [ap, pa];
+
+function updateDirectionState() {
+    if (laterale.checked) {
+        directionRadios.forEach(r => {
+            r.checked = false;
+            r.disabled = true;
+        });
+    } else {
+        directionRadios.forEach(r => {
+            r.disabled = false;
+        });
+    }
+}
+
+frontale.addEventListener("change", updateDirectionState);
+laterale.addEventListener("change", updateDirectionState);
+
+
+// Reset du form
+const resetButton = document.getElementById("reset");
+resetButton.addEventListener("click", () => {
+    document.getElementById("age").value = "";
+    document.getElementById("sex").selectedIndex = 0;
+
+    frontale.checked = false;
+    laterale.checked = false;
+
+    ap.checked = false;
+    pa.checked = false;
+})
