@@ -77,7 +77,7 @@ secrets.json
 
 # Données volumineuses (à adapter selon le projet)
 data/
-datasets/
+dataset/
 cleaned/
 
 # Modèles entraînés (si IA/ML)
@@ -88,3 +88,4 @@ checkpoints/
 *.pt
 *.h5
 *.ckpt
+
