@@ -82,6 +82,7 @@ cleaned/
 
 # Modèles entraînés (si IA/ML)
 models/
+mon_modele_gemma_local/
 checkpoints/
 *.pth
 *.pt
