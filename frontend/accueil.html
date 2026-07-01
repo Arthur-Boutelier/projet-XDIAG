@@ -27,11 +27,62 @@
 
     </nav>
 
-    <div id="drop-zone" class="drop-zone my-4">
-        <p>Glissez une radiographie ou cliquez pour sélectionner</p>
-        <p class="comment">format : .jpg, .jpeg, .png, .webp</p>
-        <input type="file" id="file-input" accept=".jpg, .jpeg, .png, .webp" hidden>
+    <div class="d-flex gap-4 justify-content-between align-items-stretch section">
+        <div id="drop-zone" class="drop-zone d-flex flex-fill flex-column align-items-center justify-content-center">
+            <p>Glissez une radiographie ou cliquez pour sélectionner</p>
+            <p class="comment">format : .jpg, .jpeg, .png, .webp</p>
+            <input type="file" id="file-input" accept=".jpg, .jpeg, .png, .webp" hidden>
+        </div>
+
+        <form action="/upload" method="post" enctype="multipart/form-data" class="d-flex flex-fill flex-column gap-3 border-custom p-3">
+            <fieldset>
+                <legend>Précision supplémentaire sur la radiographie</legend>
+
+                <div class="my-2">
+                    <label for="age">Âge</label>
+                    <input id="age" type="number">
+                </div>
+
+                <div class="my-2">
+                    <label for="sex">Sexe</label>
+                    <select id="sex">
+                        <option value="male">Homme</option>
+                        <option value="female">Femme</option>
+                    </select>
+                </div>
+
+                <div class="d-flex gap-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <input id="frontale" type="radio" name="orientation" value="frontale">
+                        <label for="frontale">Frontale</label>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <input id="laterale" type="radio" name="orientation" value="laterale">
+                        <label for="laterale">Latérale</label>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <input id="ap" type="radio" name="direction" value="ap">
+                        <label for="ap">AP</label>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <input id="pa" type="radio" name="direction" value="pa">
+                        <label for="pa">PA</label>
+                    </div>
+                </div>
+
+                <div class="d-flex my-2 justify-content-center">
+                    <button id="analyse" type="button">Analyser</button>
+                </div>
+
+            </fieldset>
+        </form>
     </div>
+
 
     <div class="result d-flex gap-4">
         <img src="assets/images/radio.jpg" alt="Image d'une radio thoracique" class="image-radio border-custom" id="preview">

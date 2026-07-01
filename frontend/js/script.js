@@ -1,5 +1,28 @@
 import { cropImage, sendImage } from "./api.js";
 
+const frontale = document.getElementById("frontale");
+const laterale = document.getElementById("laterale");
+
+const ap = document.getElementById("ap");
+const pa = document.getElementById("pa");
+const directionRadios = [ap, pa];
+
+function updateDirectionState() {
+    if (laterale.checked) {
+        directionRadios.forEach(r => {
+            r.checked = false;
+            r.disabled = true;
+        });
+    } else {
+        directionRadios.forEach(r => {
+            r.disabled = false;
+        });
+    }
+}
+
+frontale.addEventListener("change", updateDirectionState);
+laterale.addEventListener("change", updateDirectionState);
+
 function updateHeaderTitle(){
     const title = document.getElementById("title");
 
