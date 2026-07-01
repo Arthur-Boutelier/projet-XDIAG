@@ -16,4 +16,8 @@ body {
         display: flex;
         gap: 20px;
     }
+
+    .upload-zone {
+        flex-direction: column;
+    }
 }
