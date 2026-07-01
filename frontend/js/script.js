@@ -49,12 +49,26 @@ dropZone.addEventListener("dragleave", (e) => {
     dropZone.classList.remove("dragover");
 });
 
-dropZone.addEventListener("drop", (e) => {
+dropZone.addEventListener("drop", async (e) => {
     e.preventDefault();
     dropZone.classList.remove("dragover");
 
     const file = e.dataTransfer.files[0];
-    showImage(file);
+    if (!file) return;
+
+    try {
+        const blob = await cropImage(file);
+        const url = URL.createObjectURL(blob);
+
+        preview.src = url;
+        preview.style.display = "block";
+
+        const data = await sendImage(file);
+        console.log(data);
+    } catch (e) {
+        console.error("Erreur lors du traitement de l'image :", e);
+    }
+
 });
 
 function showImage(file) {
