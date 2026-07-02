@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ARVI-RX — Accueil</title>
+    <title>X-Diag | Accueil</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/responsive.css">
     <link rel="stylesheet" href="css/animations.css">
@@ -19,7 +19,7 @@
 <div class="container">
     <header class="d-flex flex-wrap justify-content-between align-items-center my-4">
         <img src="assets/icons/menu_burger.svg" alt="Icône du menu burger">
-        <h1 id="title">Assistant Radiologue Virtuel</h1>
+        <h1 id="title">Assistant X-Diag</h1>
         <img src="assets/icons/user_icon.svg" alt="Icône de l'utilisateur">
     </header>
 
@@ -36,16 +36,17 @@
 
         <form action="/upload" method="post" enctype="multipart/form-data" class="d-flex flex-fill flex-column gap-3 border-custom p-3">
             <fieldset>
-                <legend>Précision supplémentaire sur la radiographie</legend>
+                <h2>Précision supplémentaire sur la radiographie</h2>
 
                 <div class="my-2">
-                    <label for="age">Âge</label>
-                    <input id="age" type="number" min="0" class="">
+                    <label for="age">Âge : </label>
+                    <input id="age" type="number" min="0" max="150" class="">
                 </div>
 
                 <div class="my-2">
-                    <label for="sex">Sexe</label>
+                    <label for="sex">Sexe : </label>
                     <select id="sex">
+                        <option value="" selected disabled>Choisir un sexe</option>
                         <option value="male">Homme</option>
                         <option value="female">Femme</option>
                     </select>
@@ -85,15 +86,32 @@
     </div>
 
 
-    <div class="result d-flex gap-4">
-        <img src="assets/images/radio.jpg" alt="Image d'une radio thoracique" class="image-radio border-custom" id="preview">
+    <div class="result d-flex ga-4">
+        <div class="flip-card">
+            <div class="flip-card-inner border-custom">
+                <div class="flip-card-front">
+                    <img src="assets/images/radio.jpg" alt="Image d'une radio thoracique" class="image-radio" id="preview-front">
+                </div>
 
-        <div class="conclusion container border-custom my-0 p-3 section">
+                <div class="flip-card-back">
+                    <img src="assets/images/radio.jpg" alt="Image d'une radio thoracique" class="image-radio" id="preview-back">
+                </div>
+            </div>
+        </div>
+
+        <div class="conclusion border-custom my-0 p-3 section">
             <h2>Conclusion</h2>
 
             <p>Actélectasie basale gauche probable</p>
-            <h3>Confiance</h3>
-            <p class="score">82 %</p>
+
+            <div class="d-flex gap-4 justify-content-between align-items-center my-4 mt-5">
+                <h2>Confiance</h2>
+                <h3 class="score_value">82 %</h3>
+            </div>
+
+            <div class="score-bar rounded-pill">
+                <div class="score-fill rounded-pill" style="width: 82%"></div>
+            </div>
         </div>
     </div>
 

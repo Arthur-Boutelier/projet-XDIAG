@@ -8,6 +8,19 @@
     border-color: #005fcc;
 }
 
+
+/* Bouton reset */
 #reset:hover {
     background: #aaaaaa;
+}
+
+/* Retournement de l'image */
+.flip-card.flipped .flip-card-inner {
+    transform: rotateY(180deg);
+}
+
+.flip-card-back {
+    background: #8b5cf6;
+    color: white;
+    transform: rotateY(180deg);
 }

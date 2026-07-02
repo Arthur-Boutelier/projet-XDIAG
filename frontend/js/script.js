@@ -6,9 +6,9 @@ function updateHeaderTitle(){
     const title = document.getElementById("title");
 
     if (window.innerWidth <  490){
-        title.textContent = "ARVI-RX";
+        title.textContent = "X-Diag";
     } else {
-        title.textContent = "Assistant Radiologue Virtuel";
+        title.textContent = "Assistant X-Diag";
     }
 }
 
@@ -19,7 +19,7 @@ window.addEventListener("resize", updateHeaderTitle);
 // Drag&Drop
 const dropZone = document.getElementById("drop-zone");
 const fileInput = document.getElementById("file-input");
-const preview = document.getElementById("preview");
+const previewFront = document.getElementById("preview-front");
 
 dropZone.addEventListener("click", () => {
     fileInput.click();
@@ -33,8 +33,8 @@ fileInput.addEventListener("change", async (e) => {
     const blob = await cropImage(file);
     const url = URL.createObjectURL(blob);
 
-    preview.src = url;
-    preview.style.display = "block";
+    previewFront.src = url;
+    previewFront.style.display = "block";
 
     const data = await sendImage(file);
     console.log(data);
@@ -45,7 +45,7 @@ dropZone.addEventListener("dragover", (e) => {
     dropZone.classList.add("dragover");
 });
 
-dropZone.addEventListener("dragleave", (e) => {
+dropZone.addEventListener("dragleave", () => {
     dropZone.classList.remove("dragover");
 });
 
@@ -60,8 +60,8 @@ dropZone.addEventListener("drop", async (e) => {
         const blob = await cropImage(file);
         const url = URL.createObjectURL(blob);
 
-        preview.src = url;
-        preview.style.display = "block";
+        previewFront.src = url;
+        previewFront.style.display = "block";
 
         const data = await sendImage(file);
         console.log(data);
@@ -77,20 +77,23 @@ function showImage(file) {
     const reader = new FileReader();
 
     reader.onload = (e) => {
-        preview.src = e.target.result;
-        preview.style.display = "block";
+        previewFront.src = e.target.result;
+        previewFront.style.display = "block";
     }
 
     reader.readAsDataURL(file);
 }
 
 
-// Ignorer le champs AP/PA en cas de radio latérale
+// Ignorer le champ AP/PA en cas de radio latérale
 const frontale = document.getElementById("frontale");
 const laterale = document.getElementById("laterale");
 
 const ap = document.getElementById("ap");
 const pa = document.getElementById("pa");
+
+const apLabel = document.querySelector("label[for='ap']");
+const paLabel = document.querySelector("label[for='pa']");
 const directionRadios = [ap, pa];
 
 function updateDirectionState() {
@@ -99,10 +102,14 @@ function updateDirectionState() {
             r.checked = false;
             r.disabled = true;
         });
+        apLabel.style.color = "#777777";
+        paLabel.style.color = "#777777";
     } else {
         directionRadios.forEach(r => {
             r.disabled = false;
         });
+        apLabel.style.color = "";
+        paLabel.style.color = "";
     }
 }
 
@@ -119,6 +126,17 @@ resetButton.addEventListener("click", () => {
     frontale.checked = false;
     laterale.checked = false;
 
-    ap.checked = false;
-    pa.checked = false;
+    directionRadios.forEach(r => {
+        r.checked = false;
+        r.disabled = false;
+    });
+
+    apLabel.style.color = "";
+    paLabel.style.color = "";
+})
+
+
+// Retournement de la carte
+document.querySelector(".flip-card").addEventListener("click", function() {
+    this.classList.toggle("flipped");
 })
