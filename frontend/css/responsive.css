@@ -2,9 +2,18 @@ body {
     min-width: 354px;
 }
 
+@media (max-width: 990px) {
+    .flip-card {
+        width: 50%;
+        aspect-ratio: 1/1;
+    }
+}
+
 @media (max-width: 770px) {
-    .result {
-        flex-direction: column;
+    .flip-card {
+        width: 100%;
+        max-width: 240px;
+        aspect-ratio: 1/1;
     }
 
     .image-radio {
@@ -12,12 +21,29 @@ body {
         height: auto;
     }
 
+    .upload-zone {
+        flex-direction: column;
+    }
+
+    .score-zone.mt-5 {
+        margin-top: 0 !important;
+    }
+}
+
+@media (max-width: 575px) {
     .result {
         display: flex;
+        flex-direction: column;
         gap: 20px;
     }
 
-    .upload-zone {
-        flex-direction: column;
+    .flip-card {
+        width: 100%;
+        max-width: 100%;
+        aspect-ratio: 1/1;
+    }
+
+    .score-zone.mt-5 {
+        margin-top: 48px !important;
     }
 }

@@ -35,8 +35,8 @@
 }
 
 .flip-card {
-    width: 490px;
-    height: 490px;
+    width: 40%;
+    aspect-ratio: 1/1;
     /*border: none !important;*/
     perspective: 1000px;
     cursor: pointer;
@@ -73,7 +73,6 @@
 .conclusion {
     flex: 1;
     min-width: 0;
-    margin-left: 24px;
 }
 
 .score-bar {
