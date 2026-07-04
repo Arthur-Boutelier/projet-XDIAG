@@ -1,6 +1,8 @@
 kagglehub
 pandas
+numpy
+pillow
+pydicom
 fastapi
-routes
 uvicorn
 python-multipart
