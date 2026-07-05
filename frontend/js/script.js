@@ -176,9 +176,25 @@ analyseButton.addEventListener("click", async (e) => {
     try {
         const data = await sendImage(selectedFile);
         console.log(data);
+
+        const detected = document.getElementById("detected");
+        const uncertain = document.getElementById("uncertain");
+
+        detected.innerHTML = "";
+        uncertain.innerHTML = "";
+
+        data.Pathologies_detectees.forEach(item => {
+            detected.innerHTML += `<li>${item}</li>`;
+        })
+
+        data.Incertain.forEach(item => {
+            uncertain.innerHTML += `<li>${item}</li>`;
+        })
     } catch (e) {
         console.error("Erreur lors de l'analyse de l'image :", e);
     }
+
+
 
     analyseButton.disabled = false;
     resetButton.disabled = false;

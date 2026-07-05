@@ -52,7 +52,7 @@ async def predict(file: UploadFile = File(...)):
 
     return {
         "filename": file.filename,
-        "Pathologies_détectées": [
+        "Pathologies_detectees": [
             "Lung Opacity",
             "Pleural Effusion",
             "Support Devices"
