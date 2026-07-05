@@ -21,23 +21,19 @@ function patientLine(meta) {
 /** Construit le corps HTML de la modale de compte-rendu. */
 export function buildReportHtml(result, meta, filename) {
     const date = new Date().toLocaleString("fr-FR");
-    const evidence = result.visual_evidence.map((e) => `<li>${e}</li>`).join("");
-    const recos = (result.recommendations || []).map((r) => `<li>${r}</li>`).join("");
-    const limits = (result.limitations || []).map((l) => `<li>${l}</li>`).join("");
 
-    // Diagnostic différentiel : 3 hypothèses les plus probables du modèle.
-    const differential = Object.entries(result.scores || {})
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([label, pct]) => `<li>${label} — <b>${pct}%</b></li>`)
-        .join("");
+    const scoreLine = [
+        result.score_anomalie != null ? `Score d'anomalie : <b>${Number(result.score_anomalie).toFixed(2)}</b>` : "",
+        result.seuil_utilise != null ? `Seuil : <b>${Number(result.seuil_utilise).toFixed(2)}</b>` : "",
+        result.strategie ? `Stratégie : <b>${result.strategie}</b>` : "",
+    ].filter(Boolean).join(" · ");
 
     return `
     <div class="report-doc">
         <div class="report-head">
             <div>
-                <h2>Compte-rendu d'aide à la décision</h2>
-                <p class="report-sub">Assistant Radiologue Virtuel — radiographie thoracique frontale</p>
+                <h2>Compte-rendu X-DIAG</h2>
+                <p class="report-sub">Détection assistée d'anomalies sur radiographie thoracique</p>
             </div>
             <div class="report-meta">
                 <div><span>Date</span>${date}</div>
@@ -51,32 +47,17 @@ export function buildReportHtml(result, meta, filename) {
                 <span class="report-badge">${SEVERITY_LABEL[result.severity] || "Résultat"}</span>
                 <strong>${result.predicted_class}</strong>
             </div>
-            <div class="report-conf">Confiance modèle : <b>${result.confidence}%</b></div>
+            <div class="report-conf">Confiance : <b>${result.confidence}%</b></div>
         </div>
 
-        ${differential ? `<section>
-            <h3>Diagnostic différentiel</h3>
-            <ul>${differential}</ul>
+        ${scoreLine ? `<p class="report-scoreline">${scoreLine}</p>` : ""}
+
+        ${result.alerte ? `<section>
+            <h3>Conduite recommandée</h3>
+            <p>${result.alerte}</p>
         </section>` : ""}
 
-        <section>
-            <h3>Points clés anatomiques</h3>
-            <ul>${evidence}</ul>
-        </section>
-
-        <section>
-            <h3>Justification</h3>
-            <p>${result.justification}</p>
-        </section>
-
-        ${recos ? `<section><h3>Recommandations</h3><ul>${recos}</ul></section>` : ""}
-
-        <section>
-            <h3>Limites de l'analyse</h3>
-            <ul class="report-limits">${limits}</ul>
-        </section>
-
-        <div class="report-warning">${result.warning}</div>
+        <div class="report-warning">${result.avertissement || result.warning || ""}</div>
 
         <div class="report-sign">
             <div>Médecin radiologue : ______________________</div>

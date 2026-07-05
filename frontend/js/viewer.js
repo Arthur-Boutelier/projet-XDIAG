@@ -5,7 +5,7 @@
  *   - zoom au scroll + déplacement (pan) ;
  *   - fenêtrage médical : luminosité / contraste ;
  *   - négatif radiologique (inversion) ;
- *   - cartographie IA (superposition Grad-CAM) avec opacité réglable ;
+ *   - superposition de la zone détectée avec opacité réglable ;
  *   - comparateur avant / après (poignée déplaçable) ;
  *   - plein écran.
  *
@@ -31,7 +31,7 @@ export class MedicalViewer {
         this.contrast = 100;   // %
         this.invert = false;
 
-        // Cartographie IA.
+        // Superposition de la zone détectée.
         this.heatOn = false;
         this.heatOpacity = 0.75;
 
@@ -84,7 +84,7 @@ export class MedicalViewer {
             `brightness(${this.brightness}%) contrast(${this.contrast}%)${inv}`;
     }
 
-    /* ---------- Cartographie IA ---------- */
+    /* ---------- Zone détectée ---------- */
 
     toggleHeatmap(on) {
         this.heatOn = on;
@@ -113,7 +113,7 @@ export class MedicalViewer {
             this._applySplit(this.splitPct);
         } else {
             this.heatImg.style.clipPath = "none";
-            // Restaure l'état cartographie précédent.
+            // Restaure l'état précédent.
             this.heatImg.style.opacity = this.heatOn ? this.heatOpacity : 0;
         }
     }
@@ -121,7 +121,7 @@ export class MedicalViewer {
     _applySplit(pct) {
         this.splitPct = Math.min(95, Math.max(5, pct));
         this.split.style.left = this.splitPct + "%";
-        // La cartographie n'est révélée qu'à droite de la poignée.
+        // La zone n'est révélée qu'à droite de la poignée.
         this.heatImg.style.clipPath = `inset(0 0 0 ${this.splitPct}%)`;
     }
 

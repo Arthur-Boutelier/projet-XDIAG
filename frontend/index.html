@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ARV · Station de travail clinique</title>
+    <title>X-DIAG · Station de travail clinique</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,8 +21,8 @@
             </svg>
         </div>
         <div class="brand-text">
-            <strong>ARV</strong>
-            <span>Assistant Radiologue Virtuel</span>
+            <strong>X-DIAG</strong>
+            <span>Détection assistée d'anomalies thoraciques</span>
         </div>
     </div>
 
@@ -31,13 +31,6 @@
             <span id="conn-dot" class="conn-dot offline"></span>
             <span id="conn-label" class="conn-label">Connexion…</span>
         </div>
-        <!-- Bouton discret d'audit (pour le jury) -->
-        <button id="audit-btn" class="icon-btn" title="Performance &amp; Audit IA">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                <path d="M9 12l2 2 4-4"/>
-            </svg>
-        </button>
     </div>
 </header>
 
@@ -47,21 +40,35 @@
     <section id="intake" class="intake">
         <div class="intake-inner">
             <div class="intake-hero">
-                <h1>Analyse instantanée de radiographie thoracique</h1>
-                <p>Importez un cliché frontal — l'assistant génère une aide à la décision en moins de 10&nbsp;secondes.</p>
+                <h1>Détection assistée d'anomalies sur radiographie thoracique</h1>
+                <p>X-DIAG indique la présence ou l'absence d'anomalie un diagnostic précis relève du médecin radiologue.</p>
             </div>
 
             <div class="intake-grid">
                 <!-- Zone d'import -->
                 <div id="drop-zone" class="drop-zone glass">
-                    <div class="drop-icon">
-                        <svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                            <path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/>
-                        </svg>
+                    <!-- État initial : invitation au drop / clic -->
+                    <div class="drop-empty">
+                        <div class="drop-icon">
+                            <svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/>
+                            </svg>
+                        </div>
+                        <p class="drop-title">Glissez une radiographie ou cliquez pour sélectionner</p>
+                        <p class="drop-hint">Formats : PNG · JPG · WEBP · DICOM (.dcm)</p>
                     </div>
-                    <p class="drop-title">Glissez une radiographie ou cliquez pour sélectionner</p>
-                    <p class="drop-hint">Formats : PNG · JPG · WEBP · DICOM (.dcm)</p>
+                    <!-- Aperçu affiché dès qu'un fichier est sélectionné -->
+                    <div class="drop-preview hidden" id="drop-preview">
+                        <img id="preview-img" alt="Aperçu de la radiographie">
+                        <div class="preview-meta">
+                            <p class="preview-name" id="preview-name">—</p>
+                            <button type="button" id="change-file" class="ghost-btn">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                                Changer d'image
+                            </button>
+                        </div>
+                    </div>
                     <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.webp,.dcm" hidden>
                 </div>
 
@@ -69,10 +76,18 @@
                 <div class="meta-card glass">
                     <h3>Contexte clinique <span class="req">requis</span></h3>
 
-                    <label class="field">
-                        <span>Âge <i class="req-star">*</i></span>
-                        <input id="age" type="number" min="0" max="150" placeholder="ex. 64" required>
-                    </label>
+                    <div class="field">
+                        <label for="age"><span>Âge <i class="req-star">*</i></span></label>
+                        <div class="age-input">
+                            <button type="button" class="age-btn" data-age-step="-1" tabindex="-1" aria-label="Diminuer l'âge">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/></svg>
+                            </button>
+                            <input id="age" type="number" min="0" max="150" placeholder="ex. 64" inputmode="numeric" required>
+                            <button type="button" class="age-btn" data-age-step="1" tabindex="-1" aria-label="Augmenter l'âge">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                            </button>
+                        </div>
+                    </div>
 
                     <label class="field">
                         <span>Sexe <i class="req-star">*</i></span>
@@ -84,16 +99,34 @@
                     </label>
 
                     <div class="field">
-                        <span>Incidence <i class="req-star">*</i></span>
-                        <div class="radio-row">
-                            <label><input type="radio" name="orientation" value="Frontale AP"> AP</label>
-                            <label><input type="radio" name="orientation" value="Frontale PA"> PA</label>
+                        <span>Vue <i class="req-star">*</i></span>
+                        <div class="radio-row" data-radio="view">
+                            <label><input type="radio" name="view" value="frontal"> Frontal</label>
+                            <label><input type="radio" name="view" value="lateral"> Latéral</label>
                         </div>
                     </div>
 
-                    <p class="meta-error hidden" id="meta-error">Renseignez le contexte clinique (âge, sexe, incidence) avant de lancer l'analyse.</p>
+                    <!-- Incidence : uniquement pour une vue frontale -->
+                    <div class="field" id="incidence-field">
+                        <span>Incidence <i class="req-star">*</i></span>
+                        <div class="radio-row" data-radio="incidence">
+                            <label><input type="radio" name="incidence" value="AP"> AP</label>
+                            <label><input type="radio" name="incidence" value="PA"> PA</label>
+                        </div>
+                    </div>
+
+                    <p class="meta-error hidden" id="meta-error">Renseignez le contexte clinique (âge, sexe, vue et incidence si frontale) avant de lancer l'analyse.</p>
                     <p class="meta-note">Ces informations sont requises : elles conditionnent la lecture et sont tracées dans le compte-rendu.</p>
                 </div>
+            </div>
+
+            <!-- Bouton de lancement (activé quand image + contexte sont prêts) -->
+            <div class="intake-cta">
+                <button id="analyze-btn" class="primary-btn primary-btn-lg" disabled>
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z"/></svg>
+                    Lancer l'analyse
+                </button>
+                <p class="cta-hint" id="cta-hint">Sélectionnez une radiographie et renseignez le contexte clinique.</p>
             </div>
         </div>
     </section>
@@ -115,7 +148,7 @@
                 <div class="viewer-frame">
                     <div data-viewer-stage class="viewer-stage">
                         <img data-viewer-base class="viewer-img" alt="Radiographie">
-                        <img data-viewer-heat class="viewer-heat" alt="Cartographie IA">
+                        <img data-viewer-heat class="viewer-heat" alt="Zone détectée">
                     </div>
 
                     <!-- Comparateur avant / après (poignée déplaçable) -->
@@ -127,7 +160,7 @@
                     </div>
                     <div data-compare-labels class="compare-labels hidden">
                         <span>Original</span>
-                        <span>Cartographie IA</span>
+                        <span>Zone détectée</span>
                     </div>
 
                     <span class="viewer-hint">Molette : zoom · Glisser : déplacer · Double-clic : recentrer</span>
@@ -146,15 +179,15 @@
                         <input id="contrast" type="range" min="40" max="220" value="100">
                     </div>
                     <div class="tool">
-                        <label>Opacité cartographie</label>
+                        <label>Opacité de la zone</label>
                         <input id="heat-opacity" type="range" min="20" max="100" value="75">
                     </div>
                 </div>
 
                 <div class="tool-modes">
-                    <button id="heat-toggle" class="mode-btn" title="Cartographie IA (H)">
+                    <button id="heat-toggle" class="mode-btn" title="Afficher la zone détectée (H)">
                         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
-                        Cartographie IA
+                        Zone détectée
                     </button>
                     <button id="compare-btn" class="mode-btn" title="Comparateur avant / après (C)">
                         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/><path d="M7 9l-2 3 2 3M17 9l2 3-2 3"/></svg>
@@ -181,7 +214,7 @@
             <div class="verdict-card glass">
                 <div class="verdict-head">
                     <span id="verdict-badge" class="verdict-badge">—</span>
-                    <span class="verdict-tag">Conclusion probable</span>
+                    <span class="verdict-tag">Conclusion</span>
                 </div>
                 <h2 id="verdict-label" class="verdict-label">—</h2>
 
@@ -194,35 +227,25 @@
                         <div id="conf-fill" class="conf-fill"></div>
                     </div>
                 </div>
-            </div>
 
-            <div class="info-card glass">
-                <div class="card-head">
-                    <h3>Diagnostic différentiel</h3>
-                    <span class="card-sub">probabilités du modèle</span>
+                <!-- Métriques d'anomalie renvoyées par le modèle -->
+                <div class="anomaly-metrics">
+                    <div><span id="score-anomalie">—</span>Score d'anomalie</div>
+                    <div><span id="seuil-value">—</span>Seuil</div>
+                    <div><span id="strategie-value">—</span>Stratégie</div>
                 </div>
-                <div id="differential" class="differential"></div>
             </div>
 
-            <div class="info-card glass">
-                <h3>Points clés anatomiques</h3>
-                <ul id="evidence-list" class="evidence-list"></ul>
-            </div>
-
-            <div class="info-card glass">
-                <h3>Justification</h3>
-                <p id="justification" class="justification"></p>
-            </div>
-
-            <div id="reco-block" class="info-card glass hidden">
-                <h3>Recommandations</h3>
-                <ul id="reco-list" class="reco-list"></ul>
+            <!-- Alerte conditionnelle (anomalie détectée) -->
+            <div id="alerte-block" class="alerte-card hidden">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                <p id="alerte-text"></p>
             </div>
 
             <!-- Garde-fou légal & éthique -->
             <div class="disclaimer">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-                <p><strong>Assistance IA</strong> — Le diagnostic final et la validation clinique relèvent exclusivement du médecin radiologue.</p>
+                <p id="disclaimer-text"><strong>Outil d'aide au diagnostic</strong> — Le diagnostic final et la validation clinique relèvent exclusivement du médecin radiologue.</p>
             </div>
 
             <button id="validate-btn" class="primary-btn">
@@ -240,22 +263,9 @@
             <div class="scanner-line"></div>
             <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v18M16 3v18M3 8h18M3 16h18" opacity=".35"/><circle cx="12" cy="12" r="9"/></svg>
         </div>
-        <p class="processing-title">Analyse du pipeline d'inférence…</p>
-        <p class="processing-sub">Prétraitement · Inférence · Cartographie</p>
+        <p class="processing-title">Analyse en cours…</p>
+        <p class="processing-sub">Merci de patienter</p>
         <div id="proc-timer" class="proc-timer">0.0 s</div>
-    </div>
-</div>
-
-<!-- ===================== MODALE AUDIT (JURY) ===================== -->
-<div id="audit-modal" class="modal">
-    <div class="modal-card glass">
-        <div class="modal-head">
-            <h3><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Performance &amp; Audit IA</h3>
-            <button class="icon-btn" data-close title="Fermer">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
-        </div>
-        <div id="audit-body" class="modal-body audit-body"></div>
     </div>
 </div>
 

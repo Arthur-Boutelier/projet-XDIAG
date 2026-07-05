@@ -1,31 +1,52 @@
-# ARV — Assistant Radiologue Virtuel
+# X-DIAG
 
-Station de travail clinique pour l'analyse assistée de radiographies thoraciques
-frontales. Interface web « Dark Medical » branchée sur un pipeline d'inférence
-FastAPI (prétraitement CheXpert 320×320 + moteur d'analyse + cartographie IA).
+Station de travail clinique pour la **détection assistée d'anomalies sur
+radiographie thoracique**. Interface web « Dark Medical » branchée, via un
+**backend FastAPI qui sert de proxy**, sur l'API d'inférence distante déployée
+sur Azure Container Apps.
+
+Le modèle indique la présence ou l'absence d'anomalie ; il ne nomme pas la
+pathologie — le diagnostic précis relève d'un médecin radiologue.
+
+Le backend local évite les problèmes de CORS (le front ne parle qu'à lui) et
+adapte la réponse de l'API au format consommé par l'interface.
 
 ## Architecture
 
 ```
 backend/
-  app.py                     API FastAPI (routes /predict, /heatmap, /crop, /metrics, /audit)
+  app.py                     Proxy FastAPI (routes /predict, /heatmap, /metrics)
   services/
-    preprocessing.py         Pipeline existant (crop 320x320, normalisation)
-    imaging.py               Chargement PNG/JPG/WEBP/DICOM + mise au format modèle
-    inference.py             Moteur d'inférence + contrat JSON + heatmap Grad-CAM
-    audit.py                 Journal de traçabilité SQLite
-  audit.sqlite3              Base créée au premier lancement (traçabilité session)
+    remote.py                Client de l'API distante + mapping de la réponse
+    preprocessing.py         Pipeline CheXpert (crop 320x320, normalisation)
+    imaging.py               Chargement PNG/JPG/WEBP/DICOM
+    inference.py             Métriques de référence du modèle
 
 frontend/
   index.html                 Station de travail (import + visionneuse + synthèse)
   css/theme.css              Thème clinique sombre, glassmorphism
   js/
-    api.js                   Accès backend
-    viewer.js                Visionneuse (zoom, fenêtrage, toggle heatmap)
+    api.js                   Accès au backend local
+    viewer.js                Visionneuse (zoom, fenêtrage, négatif, comparateur, heatmap)
     app.js                   Orchestrateur
     report.js                Compte-rendu + export JSON / PDF
-    audit.js                 Panneau Performance & Audit IA
 ```
+
+## API distante
+
+Le backend appelle par défaut l'API déployée. L'URL est surchargeable via la
+variable d'environnement `XRAY_API_BASE` (utile pour pointer un mock local ou un
+autre déploiement) :
+
+```bash
+# Exemple : pointer une API locale
+XRAY_API_BASE="http://127.0.0.1:8100" python -m uvicorn backend.app:app --port 8000
+```
+
+> ⏱️ Le conteneur Azure est en « scale-to-zero » : le **premier appel après une
+> période d'inactivité peut prendre 1 à 3 minutes** (démarrage à froid). Le
+> timeout du proxy est réglé large en conséquence. Pour une démo fluide, prévoir
+> un appel de « préchauffage » juste avant, ou configurer `minReplicas: 1`.
 
 ## Lancement
 
@@ -41,48 +62,50 @@ python -m uvicorn backend.app:app --host 127.0.0.1 --port 8000
 python -m http.server 5500 --directory frontend
 ```
 
-Ouvrir http://localhost:5500 puis glisser une radiographie thoracique frontale
-(PNG / JPG / WEBP / DICOM). L'analyse s'affiche en moins de 10 secondes.
+Ouvrir http://localhost:5500 puis renseigner le contexte clinique (âge, sexe,
+incidence — obligatoire) et glisser une radiographie thoracique
+(PNG / JPG / WEBP / DICOM). L'analyse démarre automatiquement.
 
 ## Outils de la visionneuse
 
 | Outil | Raccourci | Description |
 |-------|-----------|-------------|
-| Cartographie IA | `H` | Superpose la carte d'activation (Grad-CAM) |
+| Zone détectée | `H` | Superpose la zone d'intérêt renvoyée par le modèle |
 | Comparer | `C` | Comparateur avant / après à poignée déplaçable |
 | Négatif | `N` | Inversion radiologique |
 | Plein écran | `F` | Visionneuse plein écran |
 | Réinitialiser | `R` | Réinitialise zoom, fenêtrage et modes |
 | Zoom / Pan | molette / glisser | Double-clic pour recentrer |
 
-La colonne de synthèse affiche aussi un **diagnostic différentiel** : la
-distribution des probabilités du modèle sur les principales pathologies.
+La colonne de synthèse indique **anomalie oui/non** avec le score et la
+confiance. En cas d'anomalie, une orientation vers un médecin radiologue est
+affichée — le nom précis de la pathologie n'est **pas** produit (l'API ne fait
+que de la détection binaire).
 
-## Contrat JSON (`POST /predict`)
+## Contrat JSON (`POST /predict` du backend local)
+
+Le backend renvoie au front la réponse de l'API distante, adaptée :
 
 ```json
 {
-  "predicted_class": "Atélectasie basale probable",
-  "confidence": 82.4,
-  "visual_evidence": ["Perte de volume basale", "..."],
-  "justification": "…",
-  "recommendations": ["Corrélation clinique", "…"],
-  "limitations": ["…"],
-  "warning": "Assistance IA — …",
-  "severity": "watch",
-  "scores": { "…": 82.4 },
-  "region": "base_gauche",
-  "inference_time_ms": 84.2
+  "anomalie_detectee": true,
+  "predicted_class": "Anomalie détectée",
+  "confidence": 76.0,
+  "score_anomalie": 0.82,
+  "seuil_utilise": 0.5,
+  "strategie": "max_aggregation",
+  "severity": "alert",
+  "alerte": "Une anomalie a été détectée sur ce cliché. Il est fortement recommandé de consulter un médecin radiologue…",
+  "avertissement": "Outil pédagogique — …",
+  "warning": "Outil pédagogique — …",
+  "heatmap": "data:image/png;base64,…",
+  "inference_time_ms": 286.9
 }
 ```
 
-## Brancher un vrai modèle
-
-Le dépôt fournit le prétraitement mais pas de poids entraînés. Le moteur
-(`backend/services/inference.py`) produit un résultat déterministe et cohérent
-pour la démonstration. Pour intégrer un modèle réel, remplacer `_predict_scores()`
-par `model.predict(preprocessing(prepared_image))` — le reste du contrat
-(formatage, heatmap, audit) reste inchangé.
+Le mapping API distante → interface est dans `backend/services/remote.py`
+(`map_result`). Hypothèses (conformes à la doc de l'API) : `niveau_de_confiance`
+et `score_anomalie` sont exprimés entre 0 et 1.
 
 > Outil d'aide à la décision. Le diagnostic final et la validation clinique
 > relèvent exclusivement du médecin radiologue.

@@ -1,10 +1,14 @@
 /**
- * Couche d'accès au backend ARV (FastAPI).
- * Un seul point de configuration : BASE_URL.
+ * Couche d'accès au backend ARV (FastAPI local).
+ *
+ * Le backend local proxifie l'API d'inférence distante (Azure) : le front ne
+ * parle qu'à ce backend, ce qui évite tout problème de CORS et centralise
+ * l'adaptation de la réponse. La prédiction renvoie déjà la heatmap (data URL),
+ * il n'y a donc qu'un seul appel par analyse.
  */
 export const BASE_URL = "http://127.0.0.1:8000";
 
-/** Construit un FormData incluant l'image et les métadonnées patient facultatives. */
+/** Construit un FormData incluant l'image et les métadonnées patient. */
 function buildForm(file, meta = {}) {
     const form = new FormData();
     form.append("file", file);
@@ -14,7 +18,7 @@ function buildForm(file, meta = {}) {
     return form;
 }
 
-/** Vérifie que le backend répond (utilisé pour l'indicateur de connexion). */
+/** Vérifie que le backend local répond (indicateur de connexion). */
 export async function checkHealth() {
     try {
         const r = await fetch(`${BASE_URL}/health`, { cache: "no-store" });
@@ -24,41 +28,17 @@ export async function checkHealth() {
     }
 }
 
-/** Recadrage 320x320 -> Blob PNG (prévisualisation). */
-export async function cropImage(file) {
-    const res = await fetch(`${BASE_URL}/crop`, { method: "POST", body: buildForm(file) });
-    if (!res.ok) throw new Error(`Crop échoué (${res.status})`);
-    return res.blob();
-}
-
-/** Inférence complète -> contrat JSON d'aide à la décision. */
+/**
+ * Analyse complète via le proxy backend -> API distante.
+ * Renvoie le contrat JSON adapté (anomalie, confiance, score, heatmap…).
+ */
 export async function predict(file, meta = {}) {
     const res = await fetch(`${BASE_URL}/predict`, { method: "POST", body: buildForm(file, meta) });
-    if (!res.ok) throw new Error(`Analyse échouée (${res.status})`);
-    return res.json();
-}
-
-/** Cartographie IA (Grad-CAM) -> Blob PNG superposé. */
-export async function heatmap(file) {
-    const res = await fetch(`${BASE_URL}/heatmap`, { method: "POST", body: buildForm(file) });
-    if (!res.ok) throw new Error(`Heatmap échouée (${res.status})`);
-    return res.blob();
-}
-
-/** Métriques du modèle (panneau d'audit). */
-export async function getMetrics() {
-    const res = await fetch(`${BASE_URL}/metrics`);
-    return res.json();
-}
-
-/** Journal de traçabilité SQLite. */
-export async function getAuditLogs(limit = 50) {
-    const res = await fetch(`${BASE_URL}/audit/logs?limit=${limit}`);
-    return res.json();
-}
-
-/** Statistiques agrégées de session. */
-export async function getAuditStats() {
-    const res = await fetch(`${BASE_URL}/audit/stats`);
+    if (!res.ok) {
+        // Le backend renvoie un message explicite (timeout Azure, API injoignable…).
+        let detail = `Analyse échouée (${res.status})`;
+        try { detail = (await res.json()).detail || detail; } catch { /* ignore */ }
+        throw new Error(detail);
+    }
     return res.json();
 }

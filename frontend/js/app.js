@@ -1,13 +1,12 @@
 /**
- * Orchestrateur de la station de travail clinique ARV.
+ * Orchestrateur de la station de travail clinique X-DIAG.
  *
- * Enchaîne : import image -> pipeline d'inférence -> bascule vers l'espace de
- * travail 2 colonnes (visionneuse + synthèse) -> actions (audit, compte-rendu).
+ * Enchaîne : import image -> analyse -> bascule vers l'espace de travail
+ * 2 colonnes (visionneuse + synthèse) -> compte-rendu.
  */
-import { checkHealth, cropImage, predict, heatmap } from "./api.js";
+import { checkHealth, predict } from "./api.js";
 import { MedicalViewer } from "./viewer.js";
 import { buildReportHtml, exportJson, exportPdf } from "./report.js";
-import { refreshAudit } from "./audit.js";
 
 /* --------------------------------------------------------------------------- */
 /*  Références DOM                                                              */
@@ -21,10 +20,19 @@ const els = {
     // Import
     dropZone: $("#drop-zone"),
     fileInput: $("#file-input"),
+    dropEmpty: $(".drop-empty"),
+    dropPreview: $("#drop-preview"),
+    previewImg: $("#preview-img"),
+    previewName: $("#preview-name"),
+    changeFile: $("#change-file"),
+    analyzeBtn: $("#analyze-btn"),
+    ctaHint: $("#cta-hint"),
     // Métadonnées patient
     age: $("#age"),
     sex: $("#sex"),
-    orientation: () => document.querySelector("input[name='orientation']:checked"),
+    view: () => document.querySelector("input[name='view']:checked"),
+    incidence: () => document.querySelector("input[name='incidence']:checked"),
+    incidenceField: $("#incidence-field"),
     metaError: $("#meta-error"),
     // Overlay traitement
     processing: $("#processing"),
@@ -44,21 +52,18 @@ const els = {
     verdictLabel: $("#verdict-label"),
     confValue: $("#conf-value"),
     confFill: $("#conf-fill"),
-    differential: $("#differential"),
-    evidenceList: $("#evidence-list"),
-    justification: $("#justification"),
-    recoBlock: $("#reco-block"),
-    recoList: $("#reco-list"),
+    scoreAnomalie: $("#score-anomalie"),
+    seuilValue: $("#seuil-value"),
+    strategieValue: $("#strategie-value"),
+    alerteBlock: $("#alerte-block"),
+    alerteText: $("#alerte-text"),
+    disclaimerText: $("#disclaimer-text"),
     // Actions
     validateBtn: $("#validate-btn"),
     newExamBtn: $("#new-exam-btn"),
     // Connexion
     connDot: $("#conn-dot"),
     connLabel: $("#conn-label"),
-    // Audit
-    auditBtn: $("#audit-btn"),
-    auditModal: $("#audit-modal"),
-    auditBody: $("#audit-body"),
     // Compte-rendu
     reportModal: $("#report-modal"),
     reportBody: $("#report-body"),
@@ -70,8 +75,8 @@ const els = {
 /*  État de session                                                            */
 /* --------------------------------------------------------------------------- */
 const state = {
-    file: null,
-    pendingFile: null,   // fichier déposé en attente d'un contexte clinique complet
+    file: null,          // fichier sélectionné (aperçu affiché, analyse au clic)
+    previewUrl: null,    // Object URL de l'aperçu, à révoquer quand on change
     result: null,
     meta: {},
     viewer: null,
@@ -96,14 +101,20 @@ function init() {
     bindActions();
     bindModals();
     pollConnection();
+    updateCtaState();
 }
 
 /* --------------------------------------------------------------------------- */
-/*  Import (drag & drop + sélection)                                           */
+/*  Import (drag & drop + sélection + aperçu)                                  */
 /* --------------------------------------------------------------------------- */
 function bindIntake() {
-    els.dropZone.addEventListener("click", () => els.fileInput.click());
-    els.fileInput.addEventListener("change", (e) => handleFile(e.target.files[0]));
+    // Clic sur la zone -> ouvrir le sélecteur, sauf si le clic vient du bouton
+    // "Changer d'image" (il déclenchera lui-même l'ouverture ci-dessous).
+    els.dropZone.addEventListener("click", (e) => {
+        if (e.target.closest("#change-file")) return;
+        els.fileInput.click();
+    });
+    els.fileInput.addEventListener("change", (e) => selectFile(e.target.files[0]));
 
     els.dropZone.addEventListener("dragover", (e) => {
         e.preventDefault();
@@ -114,58 +125,22 @@ function bindIntake() {
     els.dropZone.addEventListener("drop", (e) => {
         e.preventDefault();
         els.dropZone.classList.remove("dragover");
-        handleFile(e.dataTransfer.files[0]);
+        selectFile(e.dataTransfer.files[0]);
     });
+
+    // Changer d'image -> réinitialise l'aperçu et rouvre le sélecteur.
+    els.changeFile.addEventListener("click", (e) => {
+        e.stopPropagation();
+        clearSelection();
+        els.fileInput.click();
+    });
+
+    // Bouton principal : ne démarre l'analyse que si tout est prêt.
+    els.analyzeBtn.addEventListener("click", runAnalysis);
 }
 
-function collectMeta() {
-    const orientation = els.orientation();
-    return {
-        age: els.age.value || null,
-        sex: els.sex.value || null,
-        orientation: orientation ? orientation.value : null,
-    };
-}
-
-/** Contexte clinique obligatoire : vérifie âge, sexe et incidence. */
-function validateMeta(meta) {
-    els.age.classList.toggle("input-invalid", !meta.age);
-    els.sex.classList.toggle("input-invalid", !meta.sex);
-    document.querySelector(".radio-row").classList.toggle("radio-invalid", !meta.orientation);
-
-    const ok = Boolean(meta.age && meta.sex && meta.orientation);
-    els.metaError.classList.toggle("hidden", ok);
-    return ok;
-}
-
-/**
- * Efface le marquage d'erreur au fil de la saisie et relance automatiquement
- * l'analyse dès que le contexte est complété (si un fichier était en attente).
- */
-function bindMetaValidation() {
-    const onEdit = () => {
-        const meta = collectMeta();
-        if (meta.age) els.age.classList.remove("input-invalid");
-        if (meta.sex) els.sex.classList.remove("input-invalid");
-        if (meta.orientation) document.querySelector(".radio-row").classList.remove("radio-invalid");
-
-        if (meta.age && meta.sex && meta.orientation) {
-            els.metaError.classList.add("hidden");
-            if (state.pendingFile) {
-                const file = state.pendingFile;
-                state.pendingFile = null;
-                handleFile(file);
-            }
-        }
-    };
-    els.age.addEventListener("input", onEdit);
-    els.sex.addEventListener("change", onEdit);
-    document.querySelectorAll("input[name='orientation']")
-        .forEach((r) => r.addEventListener("change", onEdit));
-}
-
-/** Point d'entrée du pipeline : validation, animation, appels backend. */
-async function handleFile(file) {
+/** Sélectionne un fichier : validation format, aperçu, mise à jour du CTA. */
+function selectFile(file) {
     if (!file) return;
 
     const ok = /\.(png|jpe?g|webp|dcm)$/i.test(file.name) || file.type.startsWith("image/");
@@ -174,37 +149,191 @@ async function handleFile(file) {
         return;
     }
 
-    state.meta = collectMeta();
+    // Nettoyage d'un éventuel aperçu précédent.
+    if (state.previewUrl) URL.revokeObjectURL(state.previewUrl);
 
-    // Le contexte clinique doit être renseigné avant toute analyse.
+    state.file = file;
+    state.previewUrl = URL.createObjectURL(file);
+
+    // Les fichiers DICOM n'ont pas d'aperçu navigateur natif : on masque l'img
+    // et on affiche un pictogramme dans preview-meta.
+    const isDicom = /\.dcm$/i.test(file.name);
+    els.previewImg.style.display = isDicom ? "none" : "block";
+    if (!isDicom) els.previewImg.src = state.previewUrl;
+    els.previewName.textContent = file.name + (isDicom ? "  (DICOM — aperçu au lancement)" : "");
+
+    els.dropEmpty.classList.add("hidden");
+    els.dropPreview.classList.remove("hidden");
+    els.dropZone.classList.add("has-file");
+
+    updateCtaState();
+}
+
+/** Réinitialise la sélection courante (avant de choisir un autre fichier). */
+function clearSelection() {
+    if (state.previewUrl) URL.revokeObjectURL(state.previewUrl);
+    state.file = null;
+    state.previewUrl = null;
+    els.previewImg.removeAttribute("src");
+    els.fileInput.value = "";
+    els.dropEmpty.classList.remove("hidden");
+    els.dropPreview.classList.add("hidden");
+    els.dropZone.classList.remove("has-file");
+    updateCtaState();
+}
+
+/**
+ * Reflète l'état "prêt à analyser" sur le bouton principal :
+ *   - inactif si pas de fichier ou contexte incomplet ;
+ *   - actif dès que tout est en place ;
+ *   - indice contextuel juste en dessous.
+ */
+function updateCtaState() {
+    const meta = collectMeta();
+    const metaOk = Boolean(meta.age && meta.sex && meta.orientation);
+    const ready = state.file && metaOk;
+
+    els.analyzeBtn.disabled = !ready;
+
+    if (!state.file && !metaOk)
+        els.ctaHint.textContent = "Sélectionnez une radiographie et renseignez le contexte clinique.";
+    else if (!state.file)
+        els.ctaHint.textContent = "Sélectionnez une radiographie pour lancer l'analyse.";
+    else if (!metaOk)
+        els.ctaHint.textContent = "Renseignez le contexte clinique (âge, sexe, incidence).";
+    else
+        els.ctaHint.textContent = "Prêt : cliquez sur « Lancer l'analyse ».";
+}
+
+/**
+ * Assemble les métadonnées patient.
+ * `orientation` est ce qu'attend l'API : "AP" | "PA" | "LATERAL".
+ *   - Latéral : incidence AP/PA sans objet -> "LATERAL"
+ *   - Frontal : orientation = l'incidence choisie ("AP" ou "PA")
+ *   - Frontal sans incidence : orientation null -> validation en échec
+ */
+function collectMeta() {
+    const view = els.view();
+    const incidence = els.incidence();
+    const viewVal = view ? view.value : null;         // "frontal" | "lateral" | null
+    const incidenceVal = incidence ? incidence.value : null;
+
+    let orientation = null;
+    if (viewVal === "lateral") orientation = "LATERAL";
+    else if (viewVal === "frontal" && incidenceVal) orientation = incidenceVal;
+
+    return {
+        age: els.age.value || null,
+        sex: els.sex.value || null,
+        view: viewVal,
+        incidence: incidenceVal,
+        orientation,
+    };
+}
+
+/** Contexte clinique obligatoire : âge, sexe, vue, et incidence si frontal. */
+function validateMeta(meta) {
+    els.age.classList.toggle("input-invalid", !meta.age);
+    els.age.closest(".age-input")?.classList.toggle("input-invalid", !meta.age);
+    els.sex.classList.toggle("input-invalid", !meta.sex);
+    document.querySelector("[data-radio='view']").classList.toggle("radio-invalid", !meta.view);
+    // Incidence : requise uniquement si vue frontale.
+    const needIncidence = meta.view === "frontal";
+    document.querySelector("[data-radio='incidence']").classList.toggle(
+        "radio-invalid", needIncidence && !meta.incidence
+    );
+
+    const ok = Boolean(meta.age && meta.sex && meta.orientation);
+    els.metaError.classList.toggle("hidden", ok);
+    return ok;
+}
+
+/** Masque la ligne d'incidence si la vue est latérale (ou pas encore choisie). */
+function syncIncidenceVisibility() {
+    const isFrontal = els.view()?.value === "frontal";
+    els.incidenceField.classList.toggle("hidden", !isFrontal);
+    if (!isFrontal) {
+        // On décoche l'incidence si on quitte la vue frontale, pour éviter
+        // qu'une valeur cachée traîne dans le formulaire.
+        document.querySelectorAll("input[name='incidence']").forEach((r) => (r.checked = false));
+    }
+}
+
+/**
+ * Efface le marquage d'erreur au fil de la saisie et met à jour le bouton
+ * principal (activé dès que le contexte est complet).
+ */
+function bindMetaValidation() {
+    const onEdit = () => {
+        const meta = collectMeta();
+        if (meta.age) {
+            els.age.classList.remove("input-invalid");
+            els.age.closest(".age-input")?.classList.remove("input-invalid");
+        }
+        if (meta.sex) els.sex.classList.remove("input-invalid");
+        if (meta.view) document.querySelector("[data-radio='view']").classList.remove("radio-invalid");
+        if (meta.incidence)
+            document.querySelector("[data-radio='incidence']").classList.remove("radio-invalid");
+        if (meta.age && meta.sex && meta.orientation) els.metaError.classList.add("hidden");
+        updateCtaState();
+    };
+    els.age.addEventListener("input", onEdit);
+    els.sex.addEventListener("change", onEdit);
+
+    // Changement de vue : on masque/affiche l'incidence puis on revalide.
+    document.querySelectorAll("input[name='view']").forEach((r) => {
+        r.addEventListener("change", () => { syncIncidenceVisibility(); onEdit(); });
+    });
+    document.querySelectorAll("input[name='incidence']")
+        .forEach((r) => r.addEventListener("change", onEdit));
+
+    // État initial : rien coché -> masquer l'incidence.
+    syncIncidenceVisibility();
+
+    // Boutons – / + du champ âge : incrément borné à [0, 150].
+    document.querySelectorAll(".age-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const step = Number(btn.dataset.ageStep);
+            const current = Number(els.age.value) || 0;
+            const next = Math.max(0, Math.min(150, current + step));
+            els.age.value = next;
+            els.age.dispatchEvent(new Event("input", { bubbles: true }));
+        });
+    });
+}
+
+/** Clic sur "Lancer l'analyse" : valide, envoie au backend, bascule en workspace. */
+async function runAnalysis() {
+    if (!state.file) return;
+
+    state.meta = collectMeta();
     if (!validateMeta(state.meta)) {
-        state.pendingFile = file;          // repris dès que le contexte est complété
-        els.fileInput.value = "";          // autorise une re-sélection du même fichier
         els.metaError.scrollIntoView({ behavior: "smooth", block: "nearest" });
         return;
     }
 
-    state.file = file;
-    state.pendingFile = null;
+    // On garde l'aperçu client comme image de base (affiché immédiatement).
+    state.viewer.setBaseImage(state.previewUrl || URL.createObjectURL(state.file));
 
     startProcessing();
     try {
-        // Appels parallèles : recadrage (prévisualisation), heatmap et inférence.
-        const [cropBlob, heatBlob, result] = await Promise.all([
-            cropImage(file),
-            heatmap(file),
-            predict(file, state.meta),
-        ]);
-
+        // Un seul appel : le backend proxifie l'API distante et renvoie
+        // prédiction + score + heatmap (data URL) d'un coup.
+        const result = await predict(state.file, state.meta);
         state.result = result;
-        state.viewer.setBaseImage(URL.createObjectURL(cropBlob));
-        state.viewer.setHeatImage(URL.createObjectURL(heatBlob));
+
+        // Heatmap éventuelle : on active/désactive les modes qui en dépendent.
+        const hasHeat = Boolean(result.heatmap);
+        if (hasHeat) state.viewer.setHeatImage(result.heatmap);
+        els.heatToggle.disabled = !hasHeat;
+        els.compareBtn.disabled = !hasHeat;
+
         renderSynthesis(result);
         stopProcessing(true);
     } catch (err) {
         console.error(err);
         stopProcessing(false);
-        alert("Échec de l'analyse. Vérifiez que le backend est lancé (port 8000).\n" + err.message);
+        alert("Échec de l'analyse.\n" + err.message);
     }
 }
 
@@ -212,16 +341,22 @@ async function handleFile(file) {
 /*  Indicateur de traitement temps réel                                        */
 /* --------------------------------------------------------------------------- */
 function startProcessing() {
+    // Si un compteur précédent tourne encore, on l'arrête d'abord.
+    if (state.procInterval) clearInterval(state.procInterval);
+    els.procTimer.textContent = "0.0 s";
     els.processing.classList.add("active");
     const t0 = performance.now();
-    els.procInterval = setInterval(() => {
+    state.procInterval = setInterval(() => {
         const s = (performance.now() - t0) / 1000;
         els.procTimer.textContent = s.toFixed(1) + " s";
     }, 60);
 }
 
 function stopProcessing(success) {
-    clearInterval(state.procInterval);
+    if (state.procInterval) {
+        clearInterval(state.procInterval);
+        state.procInterval = null;
+    }
     els.processing.classList.remove("active");
     if (success) {
         els.intake.classList.add("hidden");
@@ -247,18 +382,24 @@ function renderSynthesis(result) {
     els.confFill.style.width = "0%";
     setTimeout(() => { els.confFill.style.width = result.confidence + "%"; }, 40);
 
-    renderDifferential(result);
+    // Métriques d'anomalie renvoyées par le modèle.
+    els.scoreAnomalie.textContent =
+        result.score_anomalie != null ? Number(result.score_anomalie).toFixed(2) : "—";
+    els.seuilValue.textContent =
+        result.seuil_utilise != null ? Number(result.seuil_utilise).toFixed(2) : "—";
+    els.strategieValue.textContent = result.strategie || "—";
 
-    els.evidenceList.innerHTML = result.visual_evidence
-        .map((e) => `<li>${e}</li>`).join("");
-
-    els.justification.textContent = result.justification;
-
-    if (result.recommendations && result.recommendations.length) {
-        els.recoBlock.classList.remove("hidden");
-        els.recoList.innerHTML = result.recommendations.map((r) => `<li>${r}</li>`).join("");
+    // Alerte conditionnelle (présente si une anomalie est détectée).
+    if (result.alerte) {
+        els.alerteText.textContent = result.alerte;
+        els.alerteBlock.classList.remove("hidden");
     } else {
-        els.recoBlock.classList.add("hidden");
+        els.alerteBlock.classList.add("hidden");
+    }
+
+    // Avertissement pédagogique renvoyé par l'API.
+    if (result.avertissement || result.warning) {
+        els.disclaimerText.textContent = result.avertissement || result.warning;
     }
 }
 
@@ -277,7 +418,7 @@ function bindViewerControls() {
     els.heatToggle.addEventListener("click", () => {
         const on = els.heatToggle.classList.toggle("active");
         state.viewer.toggleHeatmap(on);
-        // Activer la cartographie sort du mode comparateur (exclusifs).
+        // Activer la zone détectée sort du mode comparateur (exclusifs).
         if (on && state.viewer.compareOn) setCompare(false);
     });
 
@@ -300,7 +441,7 @@ function setCompare(on) {
     if (on) {
         els.heatToggle.classList.remove("active");
     } else {
-        // Reflète l'état réel de la cartographie après sortie du comparateur.
+        // Reflète l'état réel de la zone détectée après sortie du comparateur.
         els.heatToggle.classList.toggle("active", state.viewer.heatOn);
     }
 }
@@ -313,30 +454,6 @@ function resetViewer() {
     els.heatOpacity.value = 75;
     [els.heatToggle, els.compareBtn, els.invertBtn].forEach((b) =>
         b.classList.remove("active"));
-}
-
-/* --------------------------------------------------------------------------- */
-/*  Diagnostic différentiel (distribution des probabilités du modèle)          */
-/* --------------------------------------------------------------------------- */
-function renderDifferential(result) {
-    const scores = result.scores || {};
-    // Tri décroissant, on garde les 4 hypothèses les plus probables.
-    const top = Object.entries(scores)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 4);
-
-    els.differential.innerHTML = top.map(([label, pct], i) => `
-        <div class="diff-row ${i === 0 ? "diff-top" : ""}">
-            <div class="diff-label" title="${label}">${label}</div>
-            <div class="diff-track"><div class="diff-bar" style="width:0%"></div></div>
-            <div class="diff-pct">${pct}%</div>
-        </div>`).join("");
-
-    // Animation des barres après insertion dans le DOM.
-    const bars = els.differential.querySelectorAll(".diff-bar");
-    setTimeout(() => {
-        bars.forEach((bar, i) => { bar.style.width = top[i][1] + "%"; });
-    }, 60);
 }
 
 /* --------------------------------------------------------------------------- */
@@ -366,9 +483,8 @@ function bindActions() {
     els.newExamBtn.addEventListener("click", () => {
         els.workspace.classList.add("hidden");
         els.intake.classList.remove("hidden");
-        els.fileInput.value = "";
         state.result = null;
-        state.file = null;
+        clearSelection();
     });
 
     els.validateBtn.addEventListener("click", openReport);
@@ -386,15 +502,9 @@ function openReport() {
 }
 
 /* --------------------------------------------------------------------------- */
-/*  Modales (audit + compte-rendu)                                             */
+/*  Modales (compte-rendu)                                                     */
 /* --------------------------------------------------------------------------- */
 function bindModals() {
-    els.auditBtn.addEventListener("click", async () => {
-        els.auditModal.classList.add("active");
-        els.auditBody.innerHTML = `<p class="audit-loading">Chargement…</p>`;
-        await refreshAudit(els.auditBody);
-    });
-
     // Fermeture générique : boutons [data-close] et clic sur le fond.
     document.querySelectorAll("[data-close]").forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -428,4 +538,10 @@ async function pollConnection() {
 }
 
 /* --------------------------------------------------------------------------- */
-document.addEventListener("DOMContentLoaded", init);
+// Les scripts de type "module" étant différés, le DOM peut déjà être prêt au
+// moment où ce fichier s'exécute : on gère les deux cas pour garantir l'init.
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+} else {
+    init();
+}

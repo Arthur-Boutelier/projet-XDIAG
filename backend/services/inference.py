@@ -84,7 +84,7 @@ _KNOWLEDGE = {
         justification=(
             "Le modèle repère une plage d'hyperdensité alvéolaire compatible avec "
             "un foyer de condensation infectieux. La zone mise en évidence sur la "
-            "cartographie IA guide la relecture. Une corrélation avec la clinique "
+            "carte d'intérêt guide la relecture. Une corrélation avec la clinique "
             "(fièvre, CRP) et l'auscultation est indispensable."
         ),
         recommendations=[
@@ -205,7 +205,7 @@ _LIMITATIONS = [
 ]
 
 _WARNING = (
-    "Assistance IA — Le diagnostic final et la validation clinique relèvent "
+    "Outil d'aide au diagnostic — Le diagnostic final et la validation clinique relèvent "
     "exclusivement du médecin radiologue."
 )
 
@@ -365,7 +365,7 @@ def heatmap_overlay(prepared: Image.Image, result: InferenceResult,
 #  Métriques du modèle (rappel pour le panneau d'audit)
 # --------------------------------------------------------------------------- #
 MODEL_METRICS = {
-    "model_name": "ARV-CheXNet (démonstrateur)",
+    "model_name": "X-DIAG (démonstrateur)",
     "input_shape": "1 x 320 x 320 (niveaux de gris)",
     "dataset": "CheXpert (Stanford ML Group)",
     "accuracy": 0.89,

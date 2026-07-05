@@ -1,33 +1,32 @@
 """
-API de la station de travail clinique ARV (Assistant Radiologue Virtuel).
+API de la station de travail clinique X-DIAG.
 
-Expose le pipeline d'inférence au frontend :
+Le backend local sert de PROXY/adaptateur vers l'API d'inférence distante
+(Azure Container Apps) : le frontend n'appelle que ce backend (pas de CORS),
+et la réponse distante (détection binaire d'anomalie) est adaptée au contrat
+attendu par l'interface.
+
   GET  /                -> état du backend
   GET  /health          -> sonde de disponibilité
-  POST /crop            -> recadrage 320x320 (compat. existante)
-  POST /predict         -> contrat JSON complet d'aide à la décision
-  POST /heatmap         -> superposition Grad-CAM (image PNG)
-  GET  /metrics         -> métriques du modèle (panneau d'audit)
-  GET  /audit/logs      -> journal SQLite des inférences de la session
-  GET  /audit/stats     -> statistiques agrégées de session
+  POST /crop            -> recadrage 320x320 (compat. locale, non utilisé par le front)
+  POST /predict         -> proxy vers l'API distante + mapping
+  POST /heatmap         -> heatmap distante décodée en PNG (fallback)
+  GET  /metrics         -> métriques de référence du modèle
 """
-import io
+import base64
 import time
 
-from fastapi import FastAPI, File, Form, UploadFile
+import httpx
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
-from backend.services import audit
-from backend.services.imaging import load_image, prepare_image, to_png_bytes
-from backend.services.inference import (
-    MODEL_METRICS,
-    analyze,
-    heatmap_overlay,
-)
+from backend.services import remote
+from backend.services.imaging import load_image, to_png_bytes
+from backend.services.inference import MODEL_METRICS
 from backend.services.preprocessing import crop_img
 
-app = FastAPI(title="ARV — Assistant Radiologue Virtuel", version="1.0.0")
+app = FastAPI(title="X-DIAG", version="2.1.0")
 
 # CORS : on autorise les serveurs statiques usuels (IDE, http.server, live server).
 app.add_middleware(
@@ -45,14 +44,9 @@ app.add_middleware(
 )
 
 
-@app.on_event("startup")
-def _startup() -> None:
-    audit.init_db()
-
-
 @app.get("/")
 def root():
-    return {"message": "Backend lancé", "service": "ARV", "status": "ok"}
+    return {"message": "Backend lancé", "service": "X-DIAG", "status": "ok"}
 
 
 @app.get("/health")
@@ -62,7 +56,7 @@ def health():
 
 @app.post("/crop")
 async def crop(file: UploadFile = File(...)):
-    """Recadrage centré 320x320 — conservé pour compatibilité avec le front."""
+    """Recadrage centré 320x320 — conservé pour compatibilité locale."""
     image_bytes = await file.read()
     image = load_image(image_bytes, file.filename)
     cropped = crop_img(image)
@@ -76,54 +70,62 @@ async def predict(
     sex: str = Form(None),
     orientation: str = Form(None),
 ):
-    """Analyse complète : renvoie le contrat JSON d'aide à la décision."""
+    """Proxy vers l'API distante : renvoie le contrat JSON adapté à l'interface."""
     start = time.perf_counter()
-
     image_bytes = await file.read()
-    image = load_image(image_bytes, file.filename)
-    prepared = prepare_image(image)
+
+    try:
+        # inclure_probabilites=False : les probabilités par classe ne sont pas
+        # jugées fiables — on s'en tient à la détection binaire d'anomalie.
+        api_response = await remote.predict(
+            image_bytes,
+            file.filename,
+            vue=remote.to_vue(orientation),
+            age=age,
+            sexe=remote.to_sexe(sex),
+            inclure_heatmap=True,
+            inclure_probabilites=False,
+        )
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=504,
+            detail="L'API d'inférence n'a pas répondu à temps (démarrage à froid possible, réessayez).",
+        )
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(status_code=502, detail=f"Erreur de l'API distante ({exc.response.status_code}).")
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"API d'inférence injoignable : {exc}")
 
     elapsed_ms = (time.perf_counter() - start) * 1000
-    result = analyze(prepared, inference_time_ms=elapsed_ms)
-
-    # Traçabilité clinique.
-    audit.log_inference(
-        filename=file.filename,
-        predicted_class=result.predicted_class,
-        confidence=result.confidence,
-        severity=result.severity,
-        inference_time_ms=result.inference_time_ms,
-        patient_age=age,
-        patient_sex=sex,
-        orientation=orientation,
-    )
-
-    return result.to_dict()
+    return remote.map_result(api_response, elapsed_ms)
 
 
 @app.post("/heatmap")
-async def heatmap(file: UploadFile = File(...)):
-    """Renvoie la radiographie préparée avec la cartographie IA superposée (PNG)."""
+async def heatmap(
+    file: UploadFile = File(...),
+    age: int = Form(None),
+    sex: str = Form(None),
+    orientation: str = Form(None),
+):
+    """Récupère la heatmap distante et la renvoie en PNG (fallback ; /predict la fournit déjà)."""
     image_bytes = await file.read()
-    image = load_image(image_bytes, file.filename)
-    prepared = prepare_image(image)
+    try:
+        api_response = await remote.predict(
+            image_bytes, file.filename,
+            vue=remote.to_vue(orientation), age=age, sexe=remote.to_sexe(sex),
+            inclure_heatmap=True, inclure_probabilites=False,
+        )
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"API d'inférence injoignable : {exc}")
 
-    result = analyze(prepared)
-    overlay = heatmap_overlay(prepared, result)
-    return Response(content=to_png_bytes(overlay), media_type="image/png")
+    hb = api_response.get("heatmap_base64")
+    if not hb:
+        raise HTTPException(status_code=404, detail="Aucune heatmap renvoyée par l'API.")
+    raw = base64.b64decode(str(hb).split(",")[-1])
+    return Response(content=raw, media_type="image/png")
 
 
 @app.get("/metrics")
 def metrics():
-    """Métriques clés du modèle pour le panneau d'audit du jury."""
+    """Métriques de référence du modèle."""
     return MODEL_METRICS
-
-
-@app.get("/audit/logs")
-def audit_logs(limit: int = 50):
-    return {"logs": audit.get_logs(limit)}
-
-
-@app.get("/audit/stats")
-def audit_stats():
-    return audit.get_stats()

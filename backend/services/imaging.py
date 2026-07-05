@@ -2,7 +2,7 @@
 Chargement et préparation des images radiographiques.
 
 Formats supportés : PNG / JPG / JPEG / WEBP et DICOM (.dcm) si pydicom est installé.
-Toutes les images sont ramenées au format d'entrée du pipeline IA : 320x320, niveaux de gris.
+Toutes les images sont ramenées au format d'entrée du modèle : 320x320, niveaux de gris.
 """
 import io
 
