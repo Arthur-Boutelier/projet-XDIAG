@@ -29,6 +29,13 @@
     border-radius: 10px;
 }
 
+#error_message {
+    color: #dc3545;
+    font-weight: 600;
+    margin-top: 10px;
+    text-align: center;
+}
+
 #reset {
     background: #bababa;
     border: 1px solid #bababa;

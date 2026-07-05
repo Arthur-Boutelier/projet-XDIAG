@@ -34,7 +34,7 @@
             <input type="file" id="file-input" accept=".jpg, .jpeg, .png, .webp" hidden>
         </div>
 
-        <form action="/upload" method="post" enctype="multipart/form-data" class="d-flex flex-fill flex-column gap-3 border-custom p-3">
+        <form id="analysis-form" action="/upload" method="post" enctype="multipart/form-data" class="d-flex flex-fill flex-column gap-3 border-custom p-3">
             <fieldset>
                 <h2>Précision supplémentaire sur la radiographie</h2>
 
@@ -75,13 +75,14 @@
                         <label for="pa">PA</label>
                     </div>
                 </div>
-
-                <div class="d-flex my-2 justify-content-center gap-3">
-                    <button id="reset" type="button" class="btn btn-secondary rounded-pill">Réinitialiser</button>
-                    <button id="analyse" type="button" class="btn btn-primary rounded-pill">Analyser</button>
-                </div>
-
             </fieldset>
+
+            <p id="error_message"></p>
+
+            <div class="d-flex my-2 justify-content-center gap-3">
+                <button id="reset" type="button" class="btn btn-secondary rounded-pill">Réinitialiser</button>
+                <button id="analyse" type="button" class="btn btn-primary rounded-pill">Analyser</button>
+            </div>
         </form>
     </div>
 

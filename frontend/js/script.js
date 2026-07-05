@@ -54,7 +54,10 @@ dropZone.addEventListener("drop", async (e) => {
     dropZone.classList.remove("dragover");
 
     const file = e.dataTransfer.files[0];
+
     if (!file) return;
+
+    fileInput.files = e.dataTransfer.files;
 
     try {
         const blob = await cropImage(file);
@@ -135,6 +138,42 @@ resetButton.addEventListener("click", () => {
     paLabel.style.color = "";
 })
 
+
+// Gestion d'erreur formulaire incomplet
+const analyseButton = document.getElementById("analyse");
+const errorMessage = document.getElementById("error_message");
+
+analyseButton.addEventListener("click", (e) => {
+    e.preventDefault();
+
+    errorMessage.textContent = "";
+
+    const image = document.getElementById("file-input").files;
+    const patientAge = document.getElementById("age").value.trim();
+    const patientSex = document.getElementById("sex").value;
+    const orientation = document.querySelector("input[name='orientation']:checked");
+    const direction = document.querySelector("input[name='direction']:checked");
+
+    const errors = [];
+
+    if (image.length === 0) {
+        errors.push("Veuillez sélectionner une radiographie");
+    }
+
+    if (patientAge === "" || patientSex === "" || !orientation || !direction) {
+        errors.push("Veuillez remplir tous les champs");
+    }
+
+    if (errors.length > 0) {
+        errorMessage.textContent = errors.join(". ");
+        return;
+    }
+
+    console.log("Formulaire valide !");
+    analyseButton.disabled = true;
+    resetButton.disabled = true;
+    analyseButton.textContent = "Analyse...";
+});
 
 // Retournement de la carte
 document.querySelector(".flip-card").addEventListener("click", function() {
