@@ -20,6 +20,7 @@ window.addEventListener("resize", updateHeaderTitle);
 const dropZone = document.getElementById("drop-zone");
 const fileInput = document.getElementById("file-input");
 const previewFront = document.getElementById("preview-front");
+let selectedFile = null
 
 dropZone.addEventListener("click", () => {
     fileInput.click();
@@ -33,11 +34,10 @@ fileInput.addEventListener("change", async (e) => {
     const blob = await cropImage(file);
     const url = URL.createObjectURL(blob);
 
+    selectedFile = file;
+
     previewFront.src = url;
     previewFront.style.display = "block";
-
-    const data = await sendImage(file);
-    console.log(data);
 });
 
 dropZone.addEventListener("dragover", (e) => {
@@ -59,19 +59,13 @@ dropZone.addEventListener("drop", async (e) => {
 
     fileInput.files = e.dataTransfer.files;
 
-    try {
-        const blob = await cropImage(file);
-        const url = URL.createObjectURL(blob);
+    const blob = await cropImage(file);
+    const url = URL.createObjectURL(blob);
 
-        previewFront.src = url;
-        previewFront.style.display = "block";
+    selectedFile = file;
 
-        const data = await sendImage(file);
-        console.log(data);
-    } catch (e) {
-        console.error("Erreur lors du traitement de l'image :", e);
-    }
-
+    previewFront.src = url;
+    previewFront.style.display = "block";
 });
 
 function showImage(file) {
@@ -143,7 +137,7 @@ resetButton.addEventListener("click", () => {
 const analyseButton = document.getElementById("analyse");
 const errorMessage = document.getElementById("error_message");
 
-analyseButton.addEventListener("click", (e) => {
+analyseButton.addEventListener("click", async (e) => {
     e.preventDefault();
 
     errorMessage.textContent = "";
@@ -154,13 +148,18 @@ analyseButton.addEventListener("click", (e) => {
     const orientation = document.querySelector("input[name='orientation']:checked");
     const direction = document.querySelector("input[name='direction']:checked");
 
+    let directionRequired = true;
+    if (laterale.checked) {
+        directionRequired = false;
+    }
+
     const errors = [];
 
     if (image.length === 0) {
         errors.push("Veuillez sélectionner une radiographie");
     }
 
-    if (patientAge === "" || patientSex === "" || !orientation || !direction) {
+    if (patientAge === "" || patientSex === "" || !orientation || (!direction && directionRequired)) {
         errors.push("Veuillez remplir tous les champs");
     }
 
@@ -173,6 +172,17 @@ analyseButton.addEventListener("click", (e) => {
     analyseButton.disabled = true;
     resetButton.disabled = true;
     analyseButton.textContent = "Analyse...";
+
+    try {
+        const data = await sendImage(selectedFile);
+        console.log(data);
+    } catch (e) {
+        console.error("Erreur lors de l'analyse de l'image :", e);
+    }
+
+    analyseButton.disabled = false;
+    resetButton.disabled = false;
+    analyseButton.textContent = "Analyser";
 });
 
 // Retournement de la carte

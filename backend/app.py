@@ -51,5 +51,13 @@ async def predict(file: UploadFile = File(...)):
     image = crop_img(image)
 
     return {
-        "filename": file.filename
-    }
+        "filename": file.filename,
+        "Pathologies_détectées": [
+            "Lung Opacity",
+            "Pleural Effusion",
+            "Support Devices"
+        ],
+        "Incertain": [
+            "Consolidation",
+            "Atelectasis"
+        ]}
